@@ -1,0 +1,105 @@
+---
+title: "SVM"
+author: "NareshVemula"
+date: "September 16, 2016"
+output: html_document
+---
+SVM implementation
+---------------------------
+```{r}
+set.seed(10111)
+x=matrix(rnorm(40),20,2)
+y=rep(c(-1,1),c(10,10))
+x[y==1,]=x[y==1,]+1
+plot(x,col=y+3,pch=19)
+```
+fitting the svm
+```{r}
+library(e1071)
+dat=data.frame(x,y=as.factor(y))
+svmStart=svm(y~.,data=dat,kernel="linear",cost=10,scale=FALSE)
+print(svmStart)
+plot(svmStart,dat)
+```
+plotting svmfit 
+```{r}
+gridM=function(x,n=75)
+{
+rangex=apply(x,2,range)
+x1=seq(from=rangex[1,1],to=rangex[2,1],length=n)
+x2=seq(from=rangex[1,2],to=rangex[2,2],length=n)
+expand.grid(X1=x1,X2=x2 )
+}
+gridPlot=gridM(x)
+ygrid=predict(svmStart,gridPlot)
+table(ygrid)
+plot(gridPlot,col=c("red","blue")[as.numeric(ygrid)],pch=20,cex=.2)
+points(x,col=y+3,pch=19)
+points(x[svmStart$index,],pch=5,cex=2)
+```
+deriving the  coefficients from svm fit
+plotting slope of the functions
+plotting the margins as well
+```{r}
+beta=drop(t(svmStart$coefs)%*%x[svmStart$index,])
+beta0=svmStart$rho
+plot(gridPlot,col=c("red","blue")[as.numeric(ygrid)],pch=20,cex=.2)
+points(x,col=y+3,pch=19)
+points(x[svmStart$index,],pch=5,cex=2)
+abline(beta0/beta[2],-beta[1]/beta[2])
+abline((beta0+1)/beta[2],-beta[1]/beta[2])
+abline((beta0-1)/beta[2],-beta[1]/beta[2])
+rm(x,y)
+```
+nonlinearity in svm
+kernal support vector machine
+```{r}
+load(url("http://www-stat.stanford.edu/~tibs/ElemStatLearn/
+datasets/ESL.mixture.rda"))
+names(ESL.mixture)
+attach(ESL.mixture)
+table(y)
+plot(x,col=y+1)
+mixture=data.frame(y=as.factor(y),x)
+svmNonLinear=svm(factor(y)~.,data=mixture,cost=5,Kernal="radial",scale=FALSE)
+plot(svmNonLinear,mixture)
+```
+plotting custom features
+```{r}
+xgrid=expand.grid(X1=px1,X2=px2)
+ygrid=predict(svmNonLinear,xgrid)
+plot(xgrid,col=as.numeric(ygrid),pch=20,cex=.2)
+points(x,col=y+1,pch=19)
+```
+plotting contours
+```{r}
+func=predict(svmNonLinear,xgrid,decision.values=TRUE)
+str(func)
+func=attributes(func)$decision
+xgrid=expand.grid(X1=px1,X2=px2)
+ygrid=predict(svmNonLinear,xgrid)
+plot(xgrid,col=as.numeric(ygrid),pch=20,cex=.2)
+points(x,col=y+1,pch=19)
+contour(px1,px2,matrix(func,69,99),level=0,add=TRUE)
+contour(px1,px2,matrix(prob,69,99),level=0.5,add=TRUE,lwd=2)
+```
+#additional probelm
+```{r}
+x1=data.frame(y=rep(0,times=50),x=rnorm(mean=0,n=50))
+x2=data.frame(y=rep(1,times=50),x=rnorm(mean=0.5,n=50))
+sampleData=rbind(x1,x2)
+sampleData=rbind(x1,x2)
+sampleData$y=as.factor(sampleData$y)
+testx1=data.frame(y=rep(0,times=100),x=rnorm(mean=0,n=100))
+testx2=data.frame(y=rep(1,times=100),x=rnorm(mean=0.5,n=100))
+testData=rbind(testx1,testx2)
+testData$y=as.factor(testData$y)
+```
+fitting svm
+```{r}
+fitSVM=svm(as.factor(y)~.,data=sampleData,scale=FALSE)
+predictSVM=predict(fitSVM,newdata=testData)
+table(predictSVM,testData$y)
+(42+75)/nrow(testData)
+plot()
+```

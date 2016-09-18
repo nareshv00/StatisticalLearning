@@ -1,0 +1,67 @@
+---
+title: "directMarketingArules"
+author: "NareshVemula"
+date: "September 16, 2016"
+output: html_document
+---
+exploring direct marketing dataset to see for patterns 
+```{r}
+directMarket=read.csv("../../dirmktg.csv")
+str(directMarket)
+table(directMarket$outcome)
+```
+preparing the data 
+binning the variable earnings as factor variable
+```{r}
+attach(directMarket)
+directMarket$incomeBins=cut(earnings,breaks = c(5000,85000,110000,150000),
+labels=c("below 85000","below 110000","below 150000"),
+include.lowest = T)
+table(directMarket$incomeBins)
+directMarket$zip.code=as.factor(zip.code)
+```
+taking the necessary features by removing name and zipcode
+-------------------------------------------------------------
+binning age variable into three categories
+```{r}
+directMarket$zip.code=NULL
+
+directMarket$earnings=NULL
+directMarket$name=NULL  
+str(directMarket)
+quantile(age)
+directMarket$ageBins=cut(age,breaks = c(quantile(age)),labels=c("below 28","below 42","below 56","below 69"),include.lowest = T)
+table(directMarket$ageBins)
+directMarket$age=NULL
+table(directMarket$outcome)
+```
+loading the packages arules and arulesViz
+```{r}
+library(arules)
+library(arulesViz)
+```
+computing lift for response variable considering independent variable
+```{r}
+directMarketArules=apriori(directMarket,parameter =list(confidence=0.7,support=0.05),appearance = list(default="lhs",rhs=c("outcome=response","outcome=no response")),control = list(verbose=F))
+directMarketArules=sort(directMarketArules,decreasing = T,by="lift")
+inspect(directMarketArules[1:5])
+```
+removing duplicate association rules
+```{r}
+directMarketArulesRedundant=is.subset(directMarketArules,directMarketArules)
+directMarketArulesRedundant[lower.tri(directMarketArulesRedundant,diag = T)]=NA
+directMarketArulesRedundant=colSums(directMarketArulesRedundant,na.rm = T)>=1
+which(directMarketArulesRedundant)
+#removing redundant data
+directMarketArules=directMarketArules[!directMarketArulesRedundant]
+directMarketArules=sort(directMarketArules,decreasing = T,by="lift")
+inspect(directMarketArules[1:5])
+```
+plotting the associations
+```{r}
+library(iplots)
+directMarketArules
+plot(directMarketArules,interactive = F,method="graph",measure = "lift")
+#plot(directMarketArules,interactive = T,method="iplots",measure = "lift")
+
+```

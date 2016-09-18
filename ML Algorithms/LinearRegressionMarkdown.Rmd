@@ -1,0 +1,391 @@
+---
+title: "regression"
+author: "Naresh"
+date: "September 3, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+ISLR practice
+Working on regression
+```{R}
+library(MASS)
+library(ISLR)
+```
+
+working on simple linear regression with boston data
+```{R}
+attach(Boston)
+names(Boston)
+str(Boston)
+summary(Boston)
+```
+
+simple linear regression with medv as dependent variable and lstat as predictor variable
+by attaching the dataset , we don't need to mention it again and again
+```{R}
+lstatModel=lm(medv~lstat,data=Boston)
+lstatModel
+summary(lstatModel)
+names(lstatModel)
+coef(lstatModel)
+plot(lstatModel)
+confint(lstatModel)
+```
+computing CI and PI using predict function
+lwd in abline in for increasing line width
+```{r}
+predict(lstatModel,data.frame(lstat=c(5,10,15)),interval ="confidence")
+predict(lstatModel,data.frame(lstat=c(5,10,15)),interval ="prediction")
+plot(lstatModel)
+plot(lstat~medv)
+abline(lstatModel,col="red",lwd=3)
+```
+from the above plot there is evidence the relationship is non linear
+```{r}
+lstatnonL=lm(medv~lstat+I(lstat^2))
+summary(lstatnonL)
+plot(lstatnonL)
+```
+ploynomial upto 5
+```{r}
+lstatnonL=lm(medv~poly(lstat,5))
+summary(lstatnonL)
+plot(lstatnonL)
+```
+fitting step wise in r
+```{r}
+lstatModel2=lm(medv~crim+zn+chas+nox+rm+dis+rad+tax+ptratio+black+lstat)
+summary(lstatModel2)
+anova(lstatModel,lstatModel2)
+```
+cross validation with linear regression
+cv on the models lstatmodel1 and lstat model2
+```{r}
+library(DAAG)
+cv1=cv.lm(data = Boston,lstatModel,m=3)
+cv2=cv.lm(Boston,lstatModel2,m=3)
+names(cv1)
+```
+
+stepwise regression
+```{r}
+library(leaps)
+stepmodel1=regsubsets(medv~.,data = Boston ,nvmax = 13,method =c("backward"))
+plot(stepmodel1)
+stepmodel1sum=summary(stepmodel1)
+names(stepmodel1)
+plot(stepmodel1sum$cp)
+which.min(stepmodel1sum$cp)
+```
+checking different model selection criterias
+```{r}
+ plot(summary(stepmodel1)$rsq)
+ plot(summary(stepmodel1)$adjr2)
+ plot(summary(stepmodel1)$bic)
+ plot(summary(stepmodel1)$cp)
+```
+
+
+linear regression exercises
+```{r}
+attach(Auto)
+Auto1=lm(mpg~horsepower)
+summary(Auto1)
+plot(Auto1)
+```
+#predicting for value 98
+```{r}
+predict(Auto1,data.frame(horsepower=c(98)),interval="confidence")
+predict(Auto1,data.frame(horsepower=c(98)),interval="prediction")
+plot(horsepower,mpg)
+abline(Auto1,lwd=3,col="blue")
+plot(Auto1)
+```
+working on multiple linear regression homeworks
+```{r}
+pairs(Auto)
+cor(Auto[,1:8])
+```
+multiple linear regression without name
+```{r}
+MLAuto=lm(mpg ~.-name,data = Auto)
+summary(MLAuto)
+plot(MLAuto)
+```
+
+interactions
+```{r}
+MLAuto=lm(mpg ~horsepower^2+sqrt(weight)
+          +year+origin+
+            I(horsepower*weight),data = Auto)
+summary(MLAuto)
+plot(MLAuto)
+```
+Question 10
+```{r}
+attach(Carseats)
+Q10=lm(Sales~Price+Urban+US)
+summary(Q10)
+coef(Q10)
+```
+model equation
+Sales=13.0308-0.0545*Price+1.1996*US(Yes=1,No=0)-0.02192*Urban(Yes=1,No=0)
+
+remooving urban, as it is insignificant
+```{r}
+attach(Carseats)
+Q10.2=lm(Sales~Price+US)
+summary(Q10.2)
+coef(Q10.2)
+plot(Q10.2)
+```
+confidence intervals
+```{r}
+confint(Q10.2)
+```
+t-statistic investigation
+```{r}
+set.seed(1)
+x=rnorm(100)
+y=2*x+rnorm(100)  
+plot(y,x)
+```
+simple linear regression on above generated data
+```{r}
+Q11=lm(y~x)
+summary(Q11)
+Q11.2=lm(y~x+0)
+plot(Q11.2)
+summary(Q11.2)
+```
+
+checking for  x onto y and y onto x
+go trough it, u will find it interesting
+```{r}
+set.seed(12)
+x=rnorm(100)
+set.seed(12)
+y=rnorm(100)
+Q12=lm(x~y+0)
+Q12.2=lm(y~x+0)
+summary(Q12)
+summary(Q12.2)
+```
+question 13
+```{r}
+set.seed(1)
+x=rnorm(100,mean = 0,sd = 1)
+eps=rnorm(100,mean=0,sd=0.25)
+y=-1+.5*x+eps
+length(y)
+Q13=lm(y~x)
+coef(Q13)
+plot(x,y)
+abline(Q13,lwd=3,col="blue")
+```
+polynomial regression
+```{r}
+Q13.2=lm(y~poly(x,2))
+coef(Q13.2)
+summary(Q13)
+summary(Q13.2)
+plot(x,y)
+abline(Q13.2,lwd=3,col="blue")
+```
+less variance in error
+```{r}
+set.seed(1)
+x=rnorm(100,mean = 0,sd = 1)
+eps=rnorm(100,mean=0,sd=0.1)
+y=-1+.5*x+eps
+length(y)
+Q13.3=lm(y~x)
+coef(Q13.3)
+plot(x,y)
+abline(Q13.3,lwd=3,col="blue")
+```
+polynomial regressio
+```{r}
+Q13.4=lm(y~poly(x,2))
+coef(Q13.2)
+summary(Q13.3)
+summary(Q13.4)
+plot(x,y)
+abline(Q13.4,lwd=3,col="blue")
+```
+more variance in errors
+```{r}
+set.seed(1)
+x=rnorm(100,mean = 0,sd = 1)
+eps=rnorm(100,mean=0,sd=0.5)
+y=-1+.5*x+eps
+length(y)
+Q13.5=lm(y~x)
+coef(Q13.5)
+plot(x,y)
+abline(Q13.5,lwd=3,col="blue")
+```
+polynomial regression
+```{r}
+Q13.6=lm(y~poly(x,2))
+coef(Q13.6)
+summary(Q13.5)
+summary(Q13.6)
+plot(x,y)
+abline(Q13.6,lwd=3,col="blue")
+```
+confidence intervals of all the models
+```{r}
+confint(Q13)
+confint(Q13.3)
+confint(Q13.5)
+```
+Questin 14
+collinearity handling
+```{r}
+set.seed(1)
+x1=runif(100)
+x2=0.5*x1+rnorm(100)/10
+y=2+2*x1+0.3*x2*rnorm(100)
+Q14=lm(y~x1+x2)
+coef(Q14)
+summary(Q14)
+cor(x1,x2)
+```
+predicting with x1
+```{r}
+Q14.2=lm(y~x1)
+coef(Q14.2)
+summary(Q14.2)
+```
+predicting with x2
+```{r}
+Q14.3=lm(y~x2)
+coef(Q14.3)
+summary(Q14.3)
+```
+afding new observation
+```{r}
+x1=c(x1,.1)
+x2=c(x2,.8)
+y=c(y,6)
+```
+refitting the models
+```{r}
+Q14.4=lm(y~x1+x2)
+coef(Q14.4)
+summary(Q14.4)
+```
+predicting with x1
+```{r}
+Q14.5=lm(y~x1)
+coef(Q14.5)
+summary(Q14.5)
+```
+predicting with x2
+```{r}
+Q14.6=lm(y~x2)
+coef(Q14.6)
+summary(Q14.6)
+```
+observe the effect of added observation in Y
+```{r}
+plot(Q14.4)
+```
+Q15
+```{r}
+attach(Boston)
+names(Boston)
+```
+simple linear regression models
+proportion of residential land zoned for lots over 25,000 sq.ft.
+```{r}
+Q15.1=lm(crim~zn)
+summary(Q15.1)
+```
+proportion of non-retail business acres per town.
+```{r}
+Q15.2=lm(crim~indus)
+summary(Q15.2)
+```
+Charles River dummy variable (= 1 if tract bounds river; 0 otherwise).
+not significant
+```{r}
+Q15.3=lm(crim~chas)
+summary(Q15.3)
+```
+nitrogen oxides concentration (parts per 10 million).
+```{r}
+Q15.4=lm(crim~nox)
+summary(Q15.4)
+```
+average number of rooms per dwelling.
+```{r}
+Q15.5=lm(crim~rm)
+summary(Q15.5)
+```
+proportion of owner-occupied units built prior to 1940.
+```{r}
+Q15.6=lm(crim~age)
+summary(Q15.6)
+```
+weighted mean of distances to five Boston employment centres.
+```{r}
+Q15.7=lm(crim~dis)
+summary(Q15.7)
+```
+index of accessibility to radial highways.
+```{r}
+Q15.8=lm(crim~rad)
+summary(Q15.8)
+```
+full-value property-tax rate per \$10,000.
+```{r}
+Q15.9=lm(crim~tax)
+summary(Q15.9)
+```
+pupil-teacher ratio by town.
+```{r}
+Q15.10=lm(crim~ptratio)
+summary(Q15.10)
+```
+1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town.
+```{r}
+Q15.11=lm(crim~black)
+summary(Q15.11)
+```
+lower status of the population (percent).
+```{r}
+Q15.12=lm(crim~lstat)
+summary(Q15.12)
+```
+median value of owner-occupied homes in \$1000s.
+```{r}
+Q15.13=lm(crim~medv)
+summary(Q15.13)
+```
+
+complete model
+```{r}
+Q15compl=lm(crim~.,data = Boston)
+summary(Q15compl)
+```
+coeff
+```{r}
+coef(Q15compl)
+q15=c(coef(Q15compl)[-1])
+q15
+q15Individual=c(coef(Q15.1)[-1],coef(Q15.2)[-1],coef(Q15.3)[-1],coef(Q15.4)[-1],coef(Q15.5)[-1],
+coef(Q15.6)[-1],coef(Q15.7)[-1],coef(Q15.8)[-1],coef(Q15.9)[-1],coef(Q15.10)[-1],
+coef(Q15.11)[-1],coef(Q15.12)[-1],coef(Q15.13)[-1])
+plot(q15Individual,q15)
+```
+
+
+
+

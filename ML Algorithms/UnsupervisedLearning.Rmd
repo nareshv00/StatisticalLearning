@@ -1,0 +1,64 @@
+---
+title: "Unsupervised Learning"
+author: "NareshVemula"
+date: "September 18, 2016"
+output: html_document
+---
+Principal Component Analysis using US Arrests Data
+--------------------------------------------------
+```{r}
+dimnames(USArrests)
+str(USArrests)
+apply(USArrests, 2, var)
+apply(USArrests, 2, mean)
+```
+standardizing the variables having mean 0 and sd 1
+```{r}
+arrestPCA=prcomp(USArrests,scale=TRUE)
+summary(arrestPCA)
+arrestPCA
+```
+using the biplot we can observe the patterns where we have maximum crime rates and population from the USArrests Data
+```{r}
+biplot(arrestPCA,cex=.5,scale = 0,main="PCA of USArrests")
+```
+cluster analysis using generated data
+```{r}
+set.seed(101)
+x=matrix(rnorm(100*2),ncol = 2,nrow = 100)
+addMean=matrix(rnorm(8,sd = 4),4,2)
+index=sample(1:4,100,replace = TRUE)
+x=x+addMean[index,]
+plot(x,col=index,pch=20,cex=2)
+```
+performnig kmeans clustering
+============================
+```{r}
+generatedKmeans=kmeans(x,centers = 4,nstart = 15)
+generatedKmeans
+plot(x,col=generatedKmeans$cluster,cex=2,pch=1,lwd=2,main="kmeans cluster analysis")
+points(x,col=index,pch=20,cex=2)
+points(x,col=c(4,3,2,1)[index],pch=20,cex=2)
+
+```
+Hierarchical Clustering
+======================
+```{r}
+GeneratedComplteClust=hclust(dist(x),method = "complete")
+plot(GeneratedComplteClust)
+GeneratedComplteClustWard=hclust(dist(x),method = "ward.D")
+plot(GeneratedComplteClustWard)
+```
+cutting the tree at 4 clusters
+```{r}
+finalHclust=cutree(GeneratedComplteClust,4)
+table(finalHclust,index)
+```
+comparing kmeans with hierarchial clustering
+```{r}
+table(finalHclust,generatedKmeans$cluster)
+```
+plotting dendogram with labels from index
+```{r}
+plot(GeneratedComplteClust,labels = index,cex=0.8)
+```

@@ -1,0 +1,97 @@
+---
+title: "AssociationRulesMining"
+author: "NareshVemula"
+date: "September 15, 2016"
+output: html_document
+---
+Association rules , support, confidence and lift using r
+installing arules and arulesviz for analysis
+```{r}
+library(arules)
+library(arulesViz)
+library(datasets)
+```
+arules package exploration using groceries datasets
+```{r}
+data(Groceries)
+```
+
+exploring the data set
+```{r}
+itemFrequencyPlot(Groceries,top=20,col="darkblue",cex=1)
+```
+setting minimum support and mimnimum confidence for the association rule
+```{r}
+associationRule=apriori(Groceries,parameter = list(support=0.001,confidence=0.8))
+```
+#checking for top 5 rules of association
+```{r}
+options(digits = 2)
+inspect(associationRule[1:5])
+summary(associationRule)
+```
+sorting the rules in order to get the most important rules first
+```{r}
+associationRule=sort(associationRule,decreasing = T,by="confidence")
+options(digits = 2)
+inspect(associationRule[1:5])
+```
+as we can see that rule four from above is lengthy and might notoccur, I am considering only the rules which have 3 different products at max
+```{r}
+associationRule=apriori(Groceries,parameter = list(support=0.001,confidence=0.8,maxlen=3))
+associationRule=sort(associationRule,decreasing = T,by="confidence")
+inspect(associationRule[1:5])
+inspect(associationRule[1:29])
+```
+removing redundant rules
+```{r}
+subsetARules=is.subset(associationRule,associationRule)
+subsetARules[lower.tri(subsetARules,diag = T)]=NA
+redundant=colSums(subsetARules,na.rm = T)>=1
+associationRule=associationRule[!redundant]
+inspect(associationRule[1:5])
+```
+as we can see that most of the rules are associated with whole milk, we can ask questions like what can we sell with milk, or when milk will be sold with other products
+```{r}
+associationRule=apriori(data=Groceries,parameter = list(support=0.01,confidence=0.15,minlen=2),appearance = list(default="rhs",lhs="whole milk"),control = list(verbose=F))
+associationRule=sort(associationRule,decreasing = T,by="confidence")
+inspect(associationRule)
+```
+visualizing the associations
+```{r}
+plot(associationRule,method="graph",interactive = F,measure = "lift",shading="confidence")
+```
+Example 2 for titanic survival data set
+initial analysis of survival proportions
+--------------------------------------------------------------------------------
+```{r}
+titanic.raw=read.csv("titanic.csv")
+titanic.raw=titanic.raw[,-1]
+attach(titanic.raw)
+str(titanic.raw)
+prop.table(table(Age,Survived,Class))
+```
+findign association wirh survival yes or no
+```{r}
+arulesTitanic=apriori(data=titanic.raw,parameter = list(support=0.005,confidence=0.8,minlen=2),appearance = list(default="lhs",rhs=c("Survived=No","Survived=Yes")),control = list(verbose=F))
+arulesTitanic=sort(arulesTitanic,decreasing = T,by="lift")
+inspect(arulesTitanic)
+```
+removing duplicates or sub rule type 
+sub rule type is a nested rule from the master rule
+```{r}
+redundantTitanic=is.subset(arulesTitanic,arulesTitanic)
+redundantTitanic[lower.tri(redundantTitanic,diag = T)]=NA
+redundantTitanic=colSums(redundantTitanic,na.rm = T)>=1
+which(redundantTitanic)
+#removing redundant data
+arulesTitanic=arulesTitanic[!redundantTitanic]
+inspect(arulesTitanic)
+```
+plotting association rules of titanic
+-----------------------------------------
+```{r}
+plot(arulesTitanic,interactive = F,method = "graph",measure = "lift",shading = "confidence")
+plot(arulesTitanic,interactive = F,method = "paracoord",measure = "lift",shading = "confidence")
+
+```

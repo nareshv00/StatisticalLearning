@@ -1,0 +1,107 @@
+---
+title: "Classification_LDA and Logistic regression"
+author: "NareshVemula"
+date: "September 18, 2016"
+output: html_document
+---
+classification using Logistic regression and LDA
+=================================================
+Logistic Regression
+```{r}
+#loading islr
+#Using require instead of library
+require(ISLR)
+
+#Smarket
+names(Smarket)
+
+#pairs function for pairwise plots
+#colring the binary response 'direction' 
+pairs(Smarket,col=Smarket$Direction)
+
+#fitting glm.fit
+glm.fit=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,data=Smarket,family = 'binomial')
+#predicting the above data
+glmProbs=predict(glm.fit,type = 'response')
+#predictions using ifelse
+glmPredictions=ifelse(glmProbs>=0.5,'Up','Down')
+
+attach(Smarket)
+
+table(glmPredictions,Direction)
+#accuracy
+mean(glmPredictions==Direction)
+
+#modelling with train and test
+train=Year<2005
+
+glm.fit=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,data=Smarket,family = 'binomial',subset = train)
+
+#predicting using test
+glmPredictTest=predict(glm.fit,newdata = Smarket[!train,],type='response')
+#predictions using ifelse
+glmPredictions=ifelse(glmPredictTest>=0.5,'Up','Down')
+
+Direction2005=Smarket$Direction[!train]
+  
+table(glmPredictions,Direction2005)
+#accuracy
+mean(glmPredictions==Direction2005)
+
+
+#fit smaller model
+glm.fit=glm(Direction~Lag1+Lag2,data=Smarket,family=binomial,subset=train)
+#predicting using test
+glmPredictTest=predict(glm.fit,newdata = Smarket[!train,],type='response')
+#predictions using ifelse
+glmPredictions=ifelse(glmPredictTest>=0.5,'Up','Down')
+
+Direction2005=Smarket$Direction[!train]
+
+table(glmPredictions,Direction2005)
+#accuracy
+mean(glmPredictions==Direction2005)
+```
+LDA and KNN
+=============
+#LDA,linear discriminant analysis
+
+```{r}
+#package MASS for LDA
+library(MASS)
+#stock market data, LDA
+lda.fit=lda(Direction~Lag1+Lag2,subset = Year<2005,data = Smarket)
+lda.fit
+#prior probabalities are proportions of up's and down's in direction's variable
+#plotting LDA fit
+plot(lda.fit)
+
+Smarket.2005=subset(Smarket,Year==2005)
+
+lda.predict=predict(lda.fit,newdata = Smarket.2005)
+#finding the class of the lda.predict
+class(lda.predict)
+data.frame(lda.predict)[1:5,]
+
+table(lda.predict$class,Smarket.2005$Direction)
+mean(lda.predict$class==Smarket.2005$Direction)
+```
+KNN classifier
+```{r}
+#KNN CLassifier
+#load the library class for doing KNN classifier
+library(class)
+#attching a df , makes available names or variables of df
+#attach() allows a user to access the columns of a data.frame directly
+attach(Smarket)
+objects(2)
+
+#Matrix for lag1 and lag2
+xlag=cbind(Lag1,Lag2)
+train=Year<2005
+knn.pred=knn(xlag[train,],xlag[!train,],Direction[train],k=4)
+
+table(knn.pred,Direction[!train])
+
+mean(knn.pred==Direction[!train])
+```

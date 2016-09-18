@@ -1,0 +1,105 @@
+---
+title: "Trees_Boosting"
+author: "NareshVemula"
+date: "September 10, 2016"
+output: html_document
+---
+required packages and data set to start with  trees for practice session
+creating the binary variable
+```{r}
+require(ISLR)
+require(tree)
+attach(Carseats)
+require(rpart)
+require(rpart.plot)
+
+hist(Sales)
+High=ifelse(Sales<=8,"no","yes")
+Carseats=data.frame(Carseats,High)
+```
+building the first tree based model to predict sales
+```{r}
+CarseatsTree=tree(High~.-Sales,data = Carseats)
+summary(CarseatsTree)
+plot(CarseatsTree)
+```
+detailed version and summary
+```{r}
+CarseatsTree
+```
+usinig rpart and rpart.plot to do the same
+```{r}
+CarseatsTreeRpart=rpart(High~.-Sales,data = Carseats)
+summary(CarseatsTreeRpart)
+rpart.plot(CarseatsTreeRpart)
+text(CarseatsTree,pretty = 0)
+```
+creating a training and test to perform validation
+```{r}
+set.seed(1011)
+train=sample(1:nrow(Carseats),size = 250)
+CarseatsTree=tree(High~.-Sales,data = Carseats,subset = train)
+plot(CarseatsTree)
+text(CarseatsTree,pretty = 0)
+predictTree=predict(CarseatsTree,newdata = Carseats[-train,],type = "class")
+with(Carseats[-train,],table(High,predictTree))
+```
+cross validation to prune
+```{r}
+CarseatsCVTree=cv.tree(CarseatsTree,FUN = prune.misclass)
+CarseatsCVTree
+plot(CarseatsCVTree)
+CarseatsPruneTree=prune.misclass(CarseatsTree,best = 13)
+plot(CarseatsPruneTree)
+text(CarseatsPruneTree,pretty = 0)
+```
+Random forest and boosting
+boston housing data
+```{r}
+library(randomForest)
+require(MASS)
+set.seed(101)
+str(Boston)
+train=sample(1:nrow(Boston),size = 300)
+?Boston
+```
+fitting the random forest model
+```{r}
+bostonRandomForest=randomForest(medv~.,data = Boston[train,])
+bostonRandomForest
+```
+fitting random forests with different m values or 
+No. of variables tried at each split at each split
+```{r}
+RFerrors=double(13)
+testerrors=double(13)
+for (m in 1:13) {
+  fit=randomForest(medv~.,data = Boston,subset = train,mtry=m,ntree=400)
+  RFerrors[m]=fit$mse[400]
+  predTest=predict(fit,newdata=Boston[-train,])
+    testerrors[m]=with(Boston[-train,],mean(medv-predTest)^2)
+  cat(m,"")
+}
+matplot(1:m,cbind(RFerrors,testerrors),pch = 19,col = c("red","blue"),type = "b",ylab = "MSE")
+legend("topright",legend=c("RFerrors","testerrors"),pch=19,col=c("red","blu"))
+```
+Boosting
+parameters  distribution=gaussian
+tree number, shrinkage or lambda, depth
+```{r}
+require(gbm)
+bostonBoost=gbm(medv~.,data = Boston[train,],distribution = "gaussian",n.trees = 10000,
+                shrinkage = .01,interaction.depth = 4)
+summary(bostonBoost)
+plot(bostonBoost,i="lstat")
+plot(bostonBoost,i="rm")
+```
+prediction on test set with gbm
+```{r}
+ntree=seq(from=1,to=10000,by=10)
+predmat=predict(bostonBoost,newdata = Boston[-train,],n.trees = ntree)
+dim(predmat)
+err=with(Boston[-train,],apply((predmat-medv)^2,2,mean))
+plot(ntree,err,main = "boosting error")
+abline(h = min(testerrors),col="red")
+```

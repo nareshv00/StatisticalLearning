@@ -1,0 +1,192 @@
+---
+title: "LDA and Logistic Regression"
+author: "Naresh"
+date: "September 4, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+working with stock market data
+```{R}
+library(ISLR)
+str(Smarket)
+?Smarket
+summary(Smarket)
+cor(Smarket[,-9])
+pairs(Smarket)
+attach(Smarket)
+plot(Volume)
+```
+
+working with logistic regression
+```{r}
+smarket1=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,data = Smarket,family = binomial)
+summary(smarket1)
+coef(smarket1)
+summary(smarket1)$coef[,4]
+obs=predict(smarket1,data=smarket1,type = 'response')
+contrasts(Direction)
+table(TrainProbs>.5,Smarket$Direction)[1][1]
+measures=rep(1:4)
+accuracy=function(x)
+{
+  return ((x[1,1]+x[2,2])/sum(x))
+}
+acc=accuracy(table(TrainProbs>.5,Smarket$Direction))
+acc
+```
+train and test sets
+```{r}
+train=(Smarket$Year<2005)
+SmarketTest=Smarket[!train,]
+fitTrain=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,data = Smarket,
+             subset = train,family = binomial)
+testProbs=predict(fitTrain,newdata = SmarketTest,type='response')
+testAcc=accuracy(table(testProbs>0.5,SmarketTest$Direction))
+testAcc
+```
+improved logit model
+```{r}
+fitTrain=glm(Direction~Lag1+Lag2,data = Smarket,
+             subset = train,family = binomial)
+testProbs=predict(fitTrain,newdata = SmarketTest,type='response')
+testAcc=accuracy(table(testProbs>0.5,SmarketTest$Direction))
+testAcc
+```
+LDA---Linear Discriminant Analysis
+---------------------------------
+```{r}
+library(MASS)
+lda1=lda(Direction~Lag1+Lag2,data = Smarket,subset = train)
+lda1
+op=par(mar=rep(2,4))
+plot(lda1)
+par(op)
+predictTest=predict(lda1,SmarketTest)
+names(predictTest)
+ldaacc=accuracy(table(predictTest$class,SmarketTest$Direction))
+ldaacc
+
+ldaacc.5=accuracy(table(predictTest$posterior[,1]>.46,SmarketTest$Direction))
+ldaacc.5
+
+```
+
+---------------QDA-----
+
+```{r}
+qda1=qda(Direction~Lag1+Lag2,data = Smarket,subset = train)
+qda1
+predictTest=predict(qda1,SmarketTest)
+names(predictTest)
+qdaacc=accuracy(table(predictTest$class,SmarketTest$Direction))
+qdaacc
+```
+------------Working with KNN------
+requirements
+1. matrix of predictors
+2.matrix of test set predictors
+3.vector of dependent varaible belongs to train
+4. K value
+```{r}
+library(class)
+train.x=as.matrix(Smarket[!train,c('Lag1','Lag2')])
+train.y=as.matrix(Smarket[!train,c('Direction')])
+test.x=as.matrix(Smarket[train,c('Lag1','Lag2')])
+set.seed(1)
+knn1=knn(train = train.x,cl = train.y,test = test.x,k=1)
+knn1
+knnacc=accuracy(table(knn1,Smarket[train,'Direction']))
+knnacc
+```
+
+increasing k value to 3
+-----------------------
+```{r}
+
+knn1=knn(train = train.x,cl = train.y,test = test.x,k=3)
+knn1
+knnacc=accuracy(table(knn1,Smarket[train,'Direction']))
+knnacc
+```
+
+---applying KNN to caravan data----
+```{r}
+dim(Caravan)
+summary(Caravan$Purchase)
+348/5474
+```
+
+---large scale difference between units will affect the performance of KnN, we will solve this by standardizing the predictors.
+```{r}
+StatndardX=scale(Caravan[,-86])
+```
+splitting data into test and train
+```{r}
+test=1:1000
+trainX=StatndardX[-test,]
+testX=StatndardX[test,]
+trainY=Caravan[-test,'Purchase']
+testY=Caravan[test,'Purchase']
+```
+
+building the model, k=1
+```{r}
+set.seed(1)
+knnCaravan=knn(train = trainX,cl = trainY,test = testX,k=1)
+knnacc=accuracy(table(knnCaravan,testY))
+knnacc
+tp=9/(9+68)
+tp
+```
+building the model, k=3
+```{r}
+knnCaravan=knn(train = trainX,cl = trainY,test = testX,k=3)
+knnacc=accuracy(table(knnCaravan,testY))
+knnacc
+tp=5/(5+21)
+tp
+```
+
+ISLr exercises
+using prior probability of down as threshold
+```{r}
+?Weekly
+attach(Weekly)
+summary(Weekly)
+pairs(Weekly[,-9])
+Q10=glm(Direction~Year+Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data=Weekly,family  = binomial)
+summary(Q10)
+predictWeekly=predict(Q10,Weekly)
+table(predictWeekly>0.5,Weekly$Direction)
+WeeklyAcc=accuracy(table(Weekly$Direction,predictWeekly>0.444))
+WeeklyAcc
+table(Weekly$Direction)
+```
+trainng and test
+```{r}
+library(caTools)
+trainSplit=Weekly$Year<2009
+train=Weekly[trainSplit,]
+test=Weekly[!trainSplit,]
+Q10.1=glm(Direction~Year+Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data=train,family  = binomial)
+summary(Q10)
+predictWeekly=predict(Q10,newdata=test)
+table(test$Direction,predictWeekly>0.5)
+WeeklyAcc=accuracy(table(test$Direction,predictWeekly>0.444))
+WeeklyAcc
+table(test$Direction)
+```
+LDA
+```{r}
+library(MASS)
+LDAWeekly=lda(Direction~Year+Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data=train)
+LDAWeekly
+predictWeekly=predict(LDAWeekly,newdata=test)
+table(test$Direction,predictWeekly$class)
+WeeklyAcc=accuracy(table(test$Direction,predictWeekly$class))
+WeeklyAcc
+```

@@ -1,0 +1,136 @@
+---
+title: "TreesBoostingISLR"
+author: "NareshVemula"
+date: "September 15, 2016"
+output: html_document
+---
+
+working with tree based models 
+classification trees
+---------------------------------------
+```{r}
+library(tree)
+library(ISLR)
+attach(Carseats)
+High=ifelse(Sales<8,"NO","High")
+Carseats=data.frame(Carseats,High)
+```
+fitting the first tree
+```{r}
+carTree=tree(High~.-Sales,data = Carseats)
+summary(carTree)
+plot(carTree)
+text(carTree,pretty = 0)
+carTree
+```
+evaluating trees using test error rate
+--------------------------------------------
+```{r}
+set.seed(2)
+train=sample(1:nrow(Carseats),200)
+carTree=tree(High~.-Sales,data = Carseats,subset = train)
+predictTree=predict(carTree,newdata=Carseats[-train,],type="class")
+table(Carseats[-train,]$High,predictTree)
+```
+pruning the tree using cross validation
+```{r}
+set.seed(3)
+cvTree=cv.tree(carTree,FUN = prune.misclass)
+cvTree
+```
+plotting the misclassification error
+```{r}
+par(mfrow=c(1,2))
+plot(cvTree$size,cvTree$dev,type="b")
+plot(cvTree$k,cvTree$dev,type="b")
+```
+applying prune.misclass to get the optimal tree
+```{r}
+pruneTree=prune.misclass(carTree,best = 9)
+plot(pruneTree)
+text(pruneTree,pretty = 0)
+predictPruned=predict(pruneTree,Carseats[-train,],type="class")
+table(Carseats[-train,]$High,predictPruned)
+(60+94)/200
+```
+larger pruned tree
+```{r}
+largerPruneTree=prune.misclass(carTree,best = 15)
+plot(largerPruneTree)
+text(largerPruneTree,pretty = 0)
+predictPruned=predict(largerPruneTree,Carseats[-train,],type="class")
+table(Carseats[-train,]$High,predictPruned)
+(62+86)/200
+```
+Fitting Regression Trees
+------------------------
+```{r}
+library(MASS)
+set.seed(1)
+train=sample(1:nrow(Boston),nrow(Boston)/2)
+treeBoston=tree(medv~.,Boston,subset = train)
+plot(treeBoston)
+text(treeBoston)
+summary(treeBoston)
+predictBoston=predict(treeBoston,newdata=Boston[-train,])
+MSE=sqrt(mean((Boston[-train,]$medv-predictBoston)^2))
+MSE
+```
+pruning with cross validation
+---------------------------------------
+```{r}
+cvBoston=cv.tree(treeBoston)
+plot(cvBoston$size,cvBoston$dev,type="b")
+```
+Bagging and Random Forests
+performing bagging with randomforest
+reduced the test error from 5 to 3.67 using bagging
+---------------------------------------
+```{r}
+library(randomForest)
+set.seed(1)
+bagBoston=randomForest(medv~.,data = Boston,subset = train,mtry=13,importance=T)
+predictBag=predict(bagBoston,newdata=Boston[-train,])
+plot(predictBag,Boston[-train,]$medv)
+abline(0,1)
+sqrt(mean((Boston[-train,]$medv-predictBag)^2))
+plot(bagBoston)
+bagBoston=randomForest(medv~.,data = Boston,subset = train,mtry=13,importance=T,ntree=250)
+plot(bagBoston)
+```
+Performing RF using uncorrelated parameters picing of size 6
+we further decreased the RMSE to 3.670625 from 3.394124 using random forests than bagging
+```{r}
+RFBoston=randomForest(medv~.,data = Boston,subset = train,mtry=6,importance=T)
+predictRF=predict(RFBoston,newdata=Boston[-train,])
+plot(predictRF,Boston[-train,]$medv)
+abline(0,1)
+sqrt(mean((Boston[-train,]$medv-predictRF)^2))
+importance(RFBoston)
+varImpPlot(RFBoston)
+```
+Boosting
+three parameters , tree size, number of trees and shrinkage parameter
+```{r}
+library(gbm)
+set.seed(1)
+bostonBoost=gbm(medv~.,data = Boston[train,],distribution = "gaussian",n.trees = 10000,interaction.depth = 4)
+summary(bostonBoost)
+```
+partial dependence plots
+````````````````````````
+```{r}
+par(mfrow=c(1,2))
+plot(bostonBoost,i="rm")
+plot(bostonBoost,i="nox")
+```
+predicting using gbm
+we further decreased the RMSE to 3.3227 from 3.670625 using Boosting than Rf
+```{r}
+ntree=seq(from=1,to=10000,by=10)
+predictBoost=predict(bostonBoost,newdata=Boston[-train,],n.trees=ntree)
+str(predictBoost)
+err=with(Boston[-train,],apply((predictBoost-medv)^2,2,mean))
+plot(ntree,err,main = "boosting error")
+sqrt(min(err))
+```

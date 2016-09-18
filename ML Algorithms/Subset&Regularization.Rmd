@@ -1,0 +1,259 @@
+---
+title: "Regularization"
+author: "NareshVemula"
+date: "September 7, 2016"
+output: html_document
+---
+
+Practice
+-------
+Regularization and subset selection
+-----------------------------------
+```{r}
+library(ISLR)
+fix(Hitters)
+names(Hitters)
+dim(Hitters)
+sum(is.na(Hitters$Salary))
+Hitters=na.exclude(Hitters)
+```
+
+regsubsets in leaps library helps to choose the subsets
+
+```{r}
+library(leaps)
+hitterBestSubset=regsubsets(Salary~.,data = Hitters)
+summary(hitterBestSubset)
+plot(hitterBestSubset)
+```
+
+as default regsubsets returns only best 8 subset model, to include all the variables we add a parameter call nvmax
+```{r}
+hitterBestSubset19=regsubsets(Salary~.,data = Hitters, nvmax = 19)
+BestSummary=summary(hitterBestSubset19)
+names(summary(hitterBestSubset19))
+plot(BestSummary$rsq,main = 'r square vs no of variables')
+plot(BestSummary$cp,main = 'cp vs no of variables')
+plot(BestSummary$adjr2,main = 'adjusted rsquare vs no of variables')
+plot(BestSummary$rss,main = 'rss vs no of variables')
+```
+
+Best subset selection
+```{r}
+which.min(BestSummary$cp)
+which.max(BestSummary$adjr2)
+which.min(BestSummary$bic)
+which.min(BestSummary$rss)
+```
+using the built in plot command of regsubsets
+```{r}
+plot(hitterBestSubset19,scale = "r2")
+plot(hitterBestSubset19,scale = "Cp")
+plot(hitterBestSubset19,scale = "bic")
+plot(hitterBestSubset19,scale = "adjr2")
+```
+coefficients of   models with optimal values of each statistic
+```{r}
+coef(hitterBestSubset19,c(10,11,6,19))
+```
+forward and backward stepwise selection methods
+```{r}
+hitterForward=regsubsets(Salary~.,data = Hitters,method = 'forward',nvmax = 19)
+summary(hitterForward)
+hitterBackward=regsubsets(Salary~.,data = Hitters,method = 'backward',nvmax = 19)
+summary(hitterBackward)
+```
+using cross validation for the model selection
+splitting the data
+```{r}
+set.seed(1)
+train=sample(c(T,F),nrow(Hitters),rep=TRUE)  
+test=!train
+```
+applying the regsubsets to train the model
+```{r}
+HitterValid=regsubsets(Salary~.,data =Hitters[train,],nvmax = 19)
+```
+building model.matrix to run the validation
+```{r}
+HitterTestData=model.matrix(Salary~.,data = Hitters[test,])
+str(HitterTestData)
+```
+extractig coefficients to perform validation
+```{r}
+val.errors=rep(NA,19)
+for(i in 1:19)
+{
+  modelCoef=coef(HitterValid,id = i)
+  predictTest=HitterTestData[,names(modelCoef)]%*%modelCoef
+  val.errors[i]=mean((Hitters$Salary[test]-predictTest)^2)
+}
+plot(val.errors)
+val.errors
+which.min(val.errors)
+```
+writing own prediction method using the above code
+```{r}
+predictSubsetSelection=function(SubsetModel,testData,modelId,...){
+  ModelFormula=as.formula(SubsetModel$call[[2]])
+  #converting the data into matix to perform computation
+  testMatrix=model.matrix(ModelFormula,testData)
+  modelCoef=coef(SubsetModel,id=modelId)
+  testMatrix[,names(modelCoef)]%*%modelCoef
+}
+
+```
+calling this function for all the models
+```{r}
+bestModel=regsubsets(Salary~.,data = Hitters,nvmax = 19)
+coef(bestModel,10)
+```
+k fold cross validation
+```{r}
+k=10
+set.seed(1)
+folds=sample(1:k,nrow(Hitters),replace = T)
+str(folds)
+#matrix to store the errors in regsubsets cross validation
+cvErrors=matrix(nrow = k,ncol = 19)
+```
+performng CV
+```{r}
+for (j in 1:k) {
+  bestModel=regsubsets(Salary~.,data = Hitters[folds!=j,],nvmax = 19)
+  for(i in 1:19)
+  {
+    pred=predictSubsetSelection(bestModel,Hitters[folds==j,],i)
+    cvErrors[j,i]=mean( (Hitters$Salary[folds==j]-pred)^2)
+  }
+}
+
+```
+
+mean error computation
+margin 1 indicates operation on rows
+margin 2 indicates operation on columns
+```{r}
+meanError=apply(cvErrors,MARGIN = 2,mean)
+meanError
+plot(meanError,at=rep(1:19),cex.axis=.75,xlab='variable count')
+```
+we can use the model with 11 variables
+```{r}
+best11model=regsubsets(Salary~.,data = Hitters,nvmax = 19)
+coef(best11model,id = 11)
+```
+
+Lasso and Ridge Regression
+glmnet package implements lasso and ridge
+preparing x matrix input data , salary as a y vector - dependent variable
+```{r}
+
+x=model.matrix(Salary~.,data = Hitters)[,-1]
+y=Hitters$Salary;
+library(glmnet)
+```
+
+implementing ridge regression
+```{r}
+grid=10^seq(10,-2,length=100)
+ridgeModel=glmnet(x,y,alpha = 0,lambda = grid,standardize = T)
+coef(ridgeModel)
+dim(coef(ridgeModel))
+plot(ridgeModel)
+```
+
+validating the ridge model
+```{r}
+set.seed(1)
+train=sample(1:nrow(x),nrow(x)/2)
+test=(-train)
+table(test)
+y.test=y[test]
+```
+predicting using lamba 4
+```{r}
+ridgeTrain=glmnet(x[train,],y[train],alpha = 0,lambda = grid)
+predictTest=predict(ridgeTrain,s = 4,newx = x[test,])
+mean((y.test-predictTest)^2)
+```
+using cv's built in function cv.glmnet
+```{r}
+set.seed(1)
+CVridge=cv.glmnet(x[train,],y[train],alpha=0)
+plot(CVridge)
+bestLambda=CVridge$lambda.min
+predCV=predict(CVridge,s=211.7416,newx=x[test,])
+mean((y.test-predCV)^2)
+```
+fitting the new model
+```{r}
+finalRidge=glmnet(x,y,alpha = 0,lambda = bestLambda)
+coef(finalRidge)
+predict(finalRidge,type="coefficients",s=bestLambda)[1:20,]
+```
+working with LASSO
+let us check whether lasso will beat MSE of 95982.96 CV.
+```{r}
+lassoModel=glmnet(x[train,],y[train],alpha = 1,lambda = grid)
+plot(lassoModel)
+```
+we will perform CV
+```{r}
+set.seed(1)
+lassoCV=cv.glmnet(x[train,],y[train],alpha=1)
+plot(lassoCV)
+bestLassoLambda=lassoCV$lambda.min
+lassoPredTest=predict(lassoCV,s=bestLassoLambda,newx = x[test,])
+mean((lassoPredTest-y[test])^2)
+```
+building the best lasso with bestlabda
+```{r}
+finalLasso=glmnet(x,y,alpha = 1,lambda = bestLassoLambda)
+coef(finalLasso)
+lassoCoef=predict(finalLasso,type='coefficients')[1:20,]
+lassoCoef[lassoCoef!=0]
+```
+
+working with Principal Components regression
+pls is the necessary package to work on
+we use CV  and scale option to perform cross validation and standardization
+```{r}
+library(pls)
+PCRModel=pcr(Salary~.,data=Hitters,validation="CV",scale=T)
+summary(PCRModel)
+validationplot(PCRModel,val.type = "MSEP",at=1:20)
+```
+
+pcr on train and test set
+```{r}
+PCRModelTrain=pcr(Salary~.,data=Hitters,subset=train,scale=T,validation='CV')
+validationplot(PCRModelTrain,val.type = "MSEP",at=1:20)
+```
+lowest occuring at 6 PCR
+```{r}
+pcrPredict=predict(PCRModelTrain,x[test,],ncomp = 6)
+mean((pcrPredict-y[test])^2)
+```
+final fit for   pcr
+```{r}
+PCRFinal=pcr(y~x,data=Hitters,scale=T,ncomp=6)
+summary(PCRFinal)
+```
+
+Partial Least Squares regression
+```{r}
+set.seed(1)
+PartialModel=plsr(Salary~.,data=Hitters,subset=train,scale=T,validation="CV")
+summary(PartialModel)
+
+```
+
+Applied Exercises
+```{r}
+x=rnorm(100)
+e=rnorm(100)
+a=4;b=3;c=2;d=1
+y=a+b*x+c*x^2+d*x^3+e
+
+```

@@ -1,0 +1,170 @@
+---
+title: "PolynomialsAndSplines"
+author: "NareshVemula"
+date: "September 13, 2016"
+output: html_document
+---
+Loading the necessary packages
+will work with wage data to implement Polynomial reg, Splines,smoothed Splines and GAM's
+```{r}
+library(ISLR)
+attach(Wage)
+```
+Polynomial Regression and Step Functions
+Fitting only one variable in regression method with polynomials
+poly functions helps us to reduce the collinearity by fitting orthogonal polynomials
+which are linear combinations of all polynomials.
+```{r}
+fitPolyWage=lm(wage~poly(age,4),data = Wage)
+coef(summary(fitPolyWage))
+```
+adding raw=TRUE argument to the poly function
+this gives us coefficients which are confusing rather than revealing
+```{r}
+fitPolyWage=lm(wage~poly(age,4,raw=F),data = Wage)
+coef(fitPolyWage)
+```
+predicting wage using machine generated data
+computing standard errors to plot
+```{r}
+ageRange=range(age)
+ageTest=seq(from=ageRange[1],to=ageRange[2])
+predictAge=predict(fitPolyWage,newdata = list(age=ageTest),se.fit =T)
+seBands=cbind(predictAge$fit+2*predictAge$se.fit,predictAge$fit-2*predictAge$se.fit)
+```
+plotting the above predictions and SE's
+```{r}
+par(mfrow=c(1,2),mar=c(4.5,4.5,1,1),oma=c(0,0,4,0))
+plot(age,wage,xlim = ageRange,ylim = range(wage),cex=.5,col="darkgrey")
+lines(ageTest,predictAge$fit,lwd=2,col="blue")
+matlines(ageTest,seBands,lwd=1,col="red",lty=3)
+```
+Using Anove to Select the optimum model based on RSS and DF 
+```{r}
+fitPolyWage1=lm(wage~age,data = Wage)
+fitPolyWage2=lm(wage~poly(age,2),data = Wage)
+fitPolyWage3=lm(wage~poly(age,3),data = Wage)
+fitPolyWage4=lm(wage~poly(age,4),data = Wage)
+fitPolyWage5=lm(wage~poly(age,5),data = Wage)
+
+anova(fitPolyWage1,fitPolyWage2,fitPolyWage3,fitPolyWage4,fitPolyWage5)
+coef(summary(fitPolyWage5))
+```
+classifying people with wage greater than 250k using CV
+```{r}
+fitGlm=glm(I(wage>250)~poly(age,4),family  = "binomial",data = Wage)
+predictAge=predict(fitGlm,newdata = list(age=ageTest),se.fit = T)
+```
+computing CI using logistic function
+```{r}
+modelFit=exp(predictAge$fit)/(1+exp(predictAge$fit))
+seGlm=cbind(predictAge$fit+2*predictAge$se.fit,predictAge$fit-2*predictAge$se.fit)
+#changing SE to logistic function scale
+seGlm=exp(seGlm)/(1+exp(seGlm))
+```
+plotting se vs preds
+```{r}
+plot(y=I(wage>250),x=age,xlim = ageRange,ylim=c(0,0.2),col="darkgrey")
+points(jitter(age),I((wage>250)/5),cex=.5,pch="|")
+lines(ageTest,modelFit,col="blue")
+matlines(ageTest,seGlm,lwd="1",col="blue",lty=2)
+```
+fitting step functions using cut in r
+```{r}
+table(cut(age,4))
+fitStep=lm(wage~cut(age,4),data = Wage)
+summary(fitStep)
+```
+fitting splines
+```{r}
+library(splines)
+fitLmSplines=lm(wage~bs(age,knots = c(25 ,40 ,60)),data = Wage)
+summary(fitLmSplines)
+predictWageLs=predict(fitLmSplines,newdata = list(age=ageTest),se.fit = T)
+plot(age,wage,col="dark grey")
+lines(ageTest,predictWageLs$fit,lwd=2)
+lines(ageTest,predictWageLs$fit+2*predictWageLs$se.fit,lty='dashed',col="red",lwd=2)
+lines(ageTest,predictWageLs$fit-2*predictWageLs$se.fit,lty='dashed',col="red",lwd=2)
+
+```
+dimensions of a cubic spline with three knots is seven (intercept + six basis functions)
+```{r}
+dim(bs(age,knots=c(25,20,60)))
+dim(bs(age,df=6))
+attr(bs(age,df=6),"knots")
+```
+fitting natural splines
+```{r}
+fitNsSplines=lm(wage~ns(age,knots = c(25 ,40 ,60)),data = Wage)
+summary(fitNsSplines)
+predictWage=predict(fitNsSplines,newdata = list(age=ageTest),se.fit = T)
+plot(age,wage,col="dark grey")
+lines(ageTest,predictWage$fit,lwd=2)
+lines(ageTest,predictWage$fit+2*predictWage$se.fit,lty='dashed',col="blue",lwd=2)
+lines(ageTest,predictWage$fit-2*predictWage$se.fit,lty='dashed',col="blue",lwd=2)
+```
+working with smoothing splines
+```{r}
+plot(age,wage,xlim = ageRange,cex=.5,col="darkgrey")
+title("smoothing splines")
+fitSmooth=smooth.spline(age,wage,df=16)
+fitSmoothCV=smooth.spline(age,wage,cv = T)
+fitSmoothCV
+fitSmoothCV$df
+lines(fitSmooth,col="red",lwd=2,lty="dashed")
+lines(fitSmoothCV,col="blue",lwd=2)
+legend("topright",legend = c("16 Df","6 DF"),col=c("red","blue"),lty=1,lwd=2,cex=.8)
+predictSmooth=predict(fitSmoothCV,newdata=list(age=ageTest),se.fit=T)
+lines(predictSmooth$x,predictSmooth$y)
+```
+using local regression
+we can also use locfit library for local regression
+```{r}
+plot(age,wage,cex=.5,xlim = ageRange,col="darkgrey")
+title("local Regression")
+fitLocalReg=loess(wage~age,span = 0.2,data = Wage)
+fitLocalReg50=loess(wage~age,span = 0.5,data = Wage)
+predictLoess=predict(fitLocalReg,newdata =data.frame(age=ageTest),se=T)
+predictLoess50=predict(fitLocalReg50,newdata =data.frame(age=ageTest),se=T)
+lines(ageTest,predictLoess$fit,lwd=2,col="red")
+lines(ageTest,predictLoess50$fit,lwd=2,col="blue")
+legend("topright",legend = c("Span=0.2","Span=0.5"),col = c("red","blue"),cex=.8,lty=1,lwd=2)
+```
+
+Hooo, Welcome to GAM's Naresh
+```{r}
+gam1=lm(wage~ns(year,4)+ns(age,5)+education,data = Wage)
+```
+fitting gam's using gam library
+```{r}
+library(gam)
+gamWage3=gam(wage~s(year,4)+s(age,5)+education,data = Wage)
+par(mfrow=c(1,3))
+plot.gam(gamWage3,se = T,col="red")
+```
+it is evident that year is linear in nature from above plots
+test  with anova
+```{r}
+gamWage1=gam(wage~s(age,5)+education,data = Wage)
+gamWage2=gam(wage~year+s(age,5)+education,data = Wage)
+anova(gamWage1,gamWage2,gamWage3,test = "F")
+summary(gamWage3)
+plot.gam(gamWage2,se=T,col="red")
+```
+fitting local regression in gam's
+```{r}
+gamLocal=gam(wage~lo(year,age,span = 0.3)+education,data = Wage)
+summary(gamLocal)
+library(akima)
+plot.gam(gamLocal,se=T,col="red")
+```
+fitting logistic regression with gam's
+```{r}
+gamLogitWage3=gam(I(wage>250)~s(year,4)+s(age,5)+education,data = Wage)
+par(mfrow=c(1,3))
+plot.gam(gamLogitWage3,se=T,col="blue")
+table(education,I(wage>250))
+gamLogitWage3=gam(I(wage>250)~s(year,4)+s(age,5)+education,data = Wage,subset = (education!="< HS Grad"))
+par(mfrow=c(1,3))
+plot.gam(gamLogitWage3,se=T,col="blue")
+```

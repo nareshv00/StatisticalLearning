@@ -1,0 +1,189 @@
+---
+title: "LmodelRegularization"
+author: "Naresh"
+date: "September 2, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+getwd()
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+#loadning the ;library
+```{r}
+library(ISLR)
+summary(Hitters)
+```
+there are some missing values which I will deal with by replacing them:
+
+```{r}
+Hitters=na.omit(Hitters)
+with(Hitters,sum(is.na(Salary)))
+```
+
+Best Subset Regression Implementation
+------------------------------------
+using library leaps to perform best subset regression in R
+```{r}
+library(leaps)
+regfit.full=regsubsets(Salary~.,data=Hitters)
+summary(regfit.full)
+```
+
+by default it gives only 8 best subests or 8 variables
+```{r}
+regfit.full19=regsubsets(Salary~.,data = Hitters,nvmax = 19)
+reg.summary=summary(regfit.full19)
+names(reg.summary)
+plot(reg.summary$cp,xlab='nummber of variables in model' , ylab = 'cp')
+which.min(reg.summary$cp)
+```
+
+plot method from `regsubsets` output
+```{r}
+plot(regfit.full19,scale = 'Cp')
+coef(regfit.full19,10)
+```
+
+forward stepwise selection
+```{r}
+reg.fitForward=regsubsets(Salary~.,data=Hitters,nvmax=19,method='forward')
+summary(reg.fitForward)
+plot(reg.fitForward,scale='Cp')
+```
+
+Validation set approach
+----------------------------
+
+dividing the data into validation and training sets
+```{r}
+dim(Hitters)
+set.seed(1)
+train=sample(seq(263),180,replace = F)
+train
+reg.trainFwd=regsubsets(Salary~.,data = Hitters[train,],nvmax = 19, method = 'forward')
+reg.trainFwd
+summary(reg.trainFwd)
+```
+
+we will make predictions on validation data
+As the regularsubsets function does not have a inbuilt predicttion function 
+I am writing a own predict function using the coefficients
+```{r}
+RMSEerror=rep(NA,19)
+x.test=model.matrix(Salary~.,data=Hitters[-train,])
+for(i in 1:19)
+{
+  coeffIndex=coef(reg.trainFwd,id = i)
+  predicitons=x.test[,names(coeffIndex)]%*%coeffIndex
+  RMSEerror[i]=mean((Hitters[-train,]$Salary-predicitons)^2)
+}
+plot(sqrt(RMSEerror),ylab = "root RMSE", ylim = c(300,400),pch=19,type='b')
+points(sqrt(reg.trainFwd$rss[-1]/180),col='blue',pch=19,type='b')
+legend('topright',legend = c('training','validation'),col=c('blue','black'),pch=19)
+```
+
+creating the function of predictions
+for cross validation
+```{r}
+predict.regSubsets=function(objects,newdata,id,...)
+{
+  predictionFormula=as.formula(objects$call[[2]])
+  ValidData=model.matrix(predictionFormula,newdata)
+  coefficientIndex=coef(objects,id=id)
+  ValidData[,names(coefficientIndex)]%*%coefficientIndex
+}
+```
+
+Model selection by using 10 fold cross validation
+-------------------------------------------------
+```{r}
+set.seed(11)
+folds=sample(rep(1:10,length=nrow(Hitters)))
+table(folds)
+CVError=matrix(NA,10,19)
+getwd()
+for(K in 1:10)
+{
+  best.fit=regsubsets(Salary~.,data = Hitters[folds!=K,],nvmax = 19,method = 'forward')
+  for(i in 1:19)
+  {
+    pred=predict.regSubsets(best.fit,Hitters[folds==K,],id=i)
+    CVError[K,i]=mean( (Hitters$Salary[folds==K]-pred)^2)
+  }
+}
+rmse.cv=sqrt(apply(CVError, 2, mean))
+plot(rmse.cv, pch=19,type='b')
+```
+
+working onn ridge and lasso
+glm net is the package to work on
+
+```{r}
+library(glmnet)
+x=model.matrix(Salary~.-1,data = Hitters)
+y=Hitters$Salary
+```
+
+we will fit a ridge regression model
+alpha=1 is lasso
+alpha=0 is ridge
+alpha between 1 and 0, we get elastic net models
+
+```{r}
+fit.ridge=glmnet(x,y,alpha = 0)
+  plot(fit.ridge,xvar = 'lambda', label = T)
+  cv.ridge=cv.glmnet(x,y,alpha=0)
+  plot(cv.ridge)
+```
+
+lasso , l1 norm alpha=1
+
+```{r}
+fit.lasso=glmnet(x,y,alpha = 1)
+plot(fit.lasso,xvar='lambda')
+plot(fit.lasso,xvar='dev')
+cv.lasso=cv.glmnet(x,y,alpha=1)
+plot(cv.lasso)
+```
+
+working with validation and cross validation
+
+```{r}
+lasso.train=glmnet(x[train,],y[train])
+lasso.train
+plot(lasso.train,xvar='lambda')
+pred=predict(lasso.train,x[-train,])
+dim(pred)
+rmse=sqrt(apply((y[-train]-pred)^2, 2,mean))
+plot(log(lasso.train$lambda),rmse)
+lambda.best=lasso.train$lambda[order(rmse)[1]]
+coef(lasso.train,s = lambda.best)
+```
+
+naivebayes
+```{r}
+```
+

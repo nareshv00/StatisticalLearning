@@ -1,0 +1,89 @@
+---
+title: "SVM_ISLR"
+author: "NareshVemula"
+date: "September 17, 2016"
+output: html_document
+---
+bothe e1071 and liblinear libraries can be used to implement wide range of nonlinear algorithms
+these can be used to implement SVM as well
+we can use kernals such as linear , radial, polynomial
+we will set the cost parameter which helps in selecting the support vectors to classify with errors less than cost given.
+creating a matrix of observations to classify
+```{r}
+library(e1071)
+set.seed(1)
+x=matrix(rnorm(20*2),ncol=2)
+y=c(rep(-1,10),rep(1,10))
+str(x)
+x[y==1,]=x[y==1,]+1
+plot(x,col=(3-y))
+```
+changing y as factor variable
+```{r}
+svmDat=data.frame(x=x,y=as.factor(y))
+svmFit=svm(y~.,data=svmDat,cost=10,kernal="linear",scale=FALSE)
+plot(svmFit,svmDat)
+svmFit$index
+summary(svmFit)
+```
+using a smaller value for cost parameter
+we can observe number of support vectors incresing as cost comes down
+because the margine is wider
+```{r}
+svmFitCost=svm(y~.,data=svmDat,cost=.1,kernal="linear",scale=FALSE)
+plot(svmFitCost,svmDat)
+svmFitCost$index
+summary(svmFitCost)
+```
+performing cv using tune parameter from e1071
+```{r}
+set.seed(1)
+costCV=c(0.001 , 0.01, 0.1, 1,5,10,100)
+svmCV=tune(svm,y~.,data = svmDat,kernel="linear",ranges=list(cost=costCV))
+summary(svmCV)
+bestModel=svmCV$best.model
+summary(bestModel)
+plot(bestModel,svmDat)
+```
+predicting using generated data
+Support vector classifier
+```{r}
+xtest=matrix(rnorm(20*2),ncol=2)
+ytest=sample(c(-1,1),20,rep=TRUE)
+xtest[ytest ==1 ,]= xtest[ytest ==1,] + 1
+testData=data.frame(x=xtest,y=as.factor(ytest))
+predictTest=predict(bestModel,testData)
+table(testData$y,predictTest)
+```
+application of svm on gene expression data
+```{r}
+library(ISLR)
+data("Khan")
+names(Khan)
+dim(Khan$xtrain)
+length(Khan$ytrain)
+dim(Khan$xtest)
+length(Khan$ytest)
+table(Khan$ytest)
+```
+preparing data for svm
+```{r}
+geneTrain=data.frame(x=Khan$xtrain,y=as.factor(Khan$ytrain))
+str(geneTrain)
+geneTest=data.frame(x=Khan$xtest,y=as.factor(Khan$ytest))
+geneCostCV=c(0.001 , 0.01, 0.1, 1,5,10,100)
+```
+cross validating 
+```{r}
+geneCV=tune(svm,y~.,data=geneTrain,kernel="linear",ranges=list(cost=geneCostCV))
+summary(geneCV)
+bestGeneModel=geneCV$best.model
+summary(bestGeneModel)
+table(bestGeneModel$fitted,geneTrain$y)
+```
+predicting on test data
+```{r}
+predictTest=predict(bestGeneModel,newdata=geneTest)
+table(geneTest$y,predictTest)
+```
+
