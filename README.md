@@ -5,35 +5,35 @@
 [Linear Regression report]
 (https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/LinearRegressionMarkdown.html)
 
-##2. Classification
+##Classification
 
 [Classification Techniques](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/LogisticAndLDA.html)
 
-#Linear modelRegularization
+##Linear modelRegularization
 [Regularization]
 
 
-#Subset_Regularization
+##Subset_Regularization
 [Subset Selection and Regularization]
 
 
-#NonLinearExtensions
+##NonLinearExtensions
 [Non linear Extensions]
 
-#PolynomialsAndSplines
+##PolynomialsAndSplines
 [PolynomialsAndSplines]
 
 
-#TreesBoostingISLR
+##TreesBoostingISLR
 [Trees, RF and Boosting]
 
-#SVM
+##SVM
 [SVM]
 
-#SVM_ISLR
+##SVM_ISLR
 [SVM ISLR]
 
-#UnsupervisedLearning
+##UnsupervisedLearning
 [UnSupervised Learning]
 
 
