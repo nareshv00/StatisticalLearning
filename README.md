@@ -1,6 +1,6 @@
 # StatisticalLearning
 
-##1. Linear Regression Reports
+## Linear Regression Reports
 
 [Linear Regression report]
 (https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/LinearRegressionMarkdown.html)
