@@ -9,32 +9,32 @@
 
 [Classification Techniques](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/LogisticAndLDA.html)
 
-##Linear modelRegularization
-[Regularization]
+##Linear model Regularization
+[Regularization](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/LmodelRegularizationHTML.html)
 
 
 ##Subset_Regularization
-[Subset Selection and Regularization]
+[Subset Selection and Regularization](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/Subset_Regularization.html)
 
 
 ##NonLinearExtensions
-[Non linear Extensions]
+[Non linear Extensions](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/NonLinearExtensions.html)
 
 ##PolynomialsAndSplines
-[PolynomialsAndSplines]
+[PolynomialsAndSplines](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/PolynomialsAndSplines.html)
 
 
-##TreesBoostingISLR
-[Trees, RF and Boosting]
+##Trees and BoostingISLR
+[Trees, RF and Boosting](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/TreesBoostingISLR.html)
 
 ##SVM
-[SVM]
+[SVM](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/SVM.html)
 
 ##SVM_ISLR
-[SVM ISLR]
+[SVM ISLR](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/SVM_ISLR.html)
 
 ##UnsupervisedLearning
-[UnSupervised Learning]
+[UnSupervised Learning](https://rawgit.com/nareshv00/StatisticalLearning/master/ML%20Algorithm%20Reports/UnsupervisedLearning.html)
 
 
 ##Market Basket Analysis
